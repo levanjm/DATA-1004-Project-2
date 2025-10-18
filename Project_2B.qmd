@@ -1,0 +1,185 @@
+---
+title: "Group Project: Kentucky counties — Incarceration vs Poverty"
+author: "Dr. Mike LeVan"
+date: "`r Sys.Date()`"
+format:
+  html:
+    toc: true
+params:
+  incarceration_csv: "kentucky_county_incarceration_2019_2024.csv"
+  poverty_csv: "kentucky_county_poverty_2019_2024.csv"
+  years: [2019,2020,2021,2022,2023,2024]
+---
+
+# Group Project: Kentucky counties — Incarceration vs Poverty (2019-2024). {.unnumbered}
+
+## Data
+
+This group project uses two prepared CSVs:
+
+- kentucky_county_incarceration_2019_2024.csv — county-year incarceration counts and rates (per 100k).
+- kentucky_county_poverty_2019_2024.csv — county-year poverty counts and poverty rate (%).
+
+These can be found on our class Canvas page (Oct 24).
+
+
+## Goals
+
+- Use the two datasets and explore whether counties in Kentucky with higher poverty rates have higher incarceration rates.
+- Use descriptive statistics, scatterplots and boxplots, correlation, a simple linear regression, and make predictions of incarceration rate from poverty.
+
+## Instructions
+
+1) Read and inspect the data. Read the incarceration data into a variable named `incar` 
+and the poverty data into a variable named `pov`.
+
+```{r read-data}
+#| eval: false
+#| include: false
+incar <- read_csv(incarceration_csv, show_col_types = FALSE)
+pov   <- read_csv(poverty_csv, show_col_types = FALSE)
+
+# Inspect columns and a few rows
+glimpse(incar)
+glimpse(pov)
+
+head(incar, 3)
+head(pov, 3)
+```
+
+  - Describe the key columns in each dataset. Which variables would be best to use 
+in this report? Why? Discuss any issues that might be present.
+
+
+2) Basic descriptive statistics
+- For the two datasets (all years) and by year, report:
+  - Number of counties (rows)
+  - Mean, median, standard deviation of incarceration_rate_per_100k and poverty_rate.
+  Use the variable names mean_incar, med_incar, sd_incar for incarceration rate and
+  mean_pov, med_pov, sd_pov for poverty rate.
+  - Use dplyr functions: summarise(), group_by(), mean(), median(), sd().
+  - Discuss you findings and create a table to show these results.
+```{r descriptives}
+#| eval: false
+#| include: false
+# Overall
+df %>%
+  summarise(
+    n = n(),
+    mean_incar = mean(incarceration_rate_per_100k, na.rm = TRUE),
+    med_incar = median(incarceration_rate_per_100k, na.rm = TRUE),
+    sd_incar = sd(incarceration_rate_per_100k, na.rm = TRUE),
+    mean_pov = mean(poverty_rate, na.rm = TRUE),
+    med_pov = median(poverty_rate, na.rm = TRUE),
+    sd_pov = sd(poverty_rate, na.rm = TRUE)
+  ) %>% print()
+
+# By year
+df %>%
+  group_by(year) %>%
+  summarise(
+    n = n(),
+    mean_incar = mean(incarceration_rate_per_100k, na.rm = TRUE),
+    mean_pov = mean(poverty_rate, na.rm = TRUE)
+  ) %>%
+  arrange(year) %>%
+  print(n = Inf)
+```
+
+3) Boxplots (poverty rate by year)
+- Create boxplots of poverty_rate by year to see how poverty rates vary across years.
+- Use a different color fill for the boxes.
+- Discuss any trends or patterns you observe, if they data shows any.
+```{r boxplot-poverty, fig.height=5, fig.width=7}
+#| eval: false
+#| include: false
+ggplot(df, aes(x = factor(year), y = poverty_rate)) +
+  geom_boxplot(fill = year) +
+  labs(x = "Year", y = "Poverty rate (%)", title = "P
+overty Rate by Year (KY counties)") +
+  theme_minimal()
+```
+
+4) Correlation
+- Compute Pearson correlation between poverty_rate and incarceration_rate_per_100k overall and by year.
+```{r correlation}
+#| eval: false
+#| include: false
+# overall Pearson
+cor_overall <- cor.test(df$poverty_rate, df$incarceration_rate_per_100k, method = "pearson")
+cor_overall$estimate
+cor_overall$p.value
+
+# by year
+df %>%
+  group_by(year) %>%
+  summarise(
+    r = cor(poverty_rate, incarceration_rate_per_100k, use = "complete.obs"),
+    n = sum(!is.na(poverty_rate) & !is.na(incarceration_rate_per_100k))
+  ) %>%
+  print(n = Inf)
+```
+
+5) Scatterplots (poverty vs incarceration)
+- Make a scatterplot of poverty_rate (x) vs incarceration_rate_per_100k (y).
+- Describe the scatterplot. Is there a visible relationship? Is it strong or weak?
+
+```{r scatter-all, fig.height=5, fig.width=7}
+#| eval: false
+#| include: false
+ggplot(df, aes(x = poverty_rate, y = incarceration_rate_per_100k, color = factor(year))) +
+  geom_point(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE, color = "black") +   # overall regression line
+  labs(x = "Poverty rate (%)", y = "Incarceration rate (per 100k)",
+       color = "Year", title = "Poverty vs Incarceration (KY counties)") +
+  theme_minimal()
+```
+
+7) Linear regression
+- Fit a model to predict incarceration_rate_per_100k from poverty_rate using lm().
+- Use the `summary()` function to report coefficients and the R-squared value. 
+Explain what these values mean in plain language.
+
+```{r simple-lm}
+#| eval: false
+#| include: false
+simple_model <- lm(incarceration_rate_per_100k ~ poverty_rate, data = df)
+summary(simple_model)
+
+# tidy coefficients
+tidy(simple_model, conf.int = TRUE)
+```
+
+Interpretation guidance (write this in your report)
+- Report the slope and intercept. In plain language: "The slope means that for every 1 percentage-point increase in poverty rate, the incarceration rate increases/decreases by X per 100k (on average)."
+- Report R-squared: how much variation the model explains.
+- Note: this is association, not causation.
+
+Overlay the regression line on the scatter (already shown above with geom_smooth).
+
+8) Make predictions
+- Predict incarceration rate for hypothetical poverty values (e.g., 10%, 15%, 25%).
+```{r predict-examples}
+#| eval: false
+#| include: false
+new_pov <- tibble(poverty_rate = c(10, 15, 25))
+predict(simple_model, newdata = new_pov, interval = "prediction", level = 0.95)
+```
+
+- Interpret the prediction intervals: they show uncertainty around a predicted county's incarceration rate.
+
+
+## Grading  
+
+  - Code runs and outputs saved: 30%
+  - Visualizations and descriptive stats: 30%
+  - Correct correlation, regression, and interpretation: 30%
+  - Clarity of write-up and ethical framing: 10%
+
+## Ethics & limitations (short to include in write-up)
+  - This analysis shows association, not causation. Do not claim poverty causes incarceration based on this simple model.
+  - Data limitations: county-level rates can be unstable in small counties; reporting differences and missing data may affect results.
+  - Race and demographic variables (if used) are descriptive of population composition; interpreting them requires careful consideration of structural and historical context.
+
+
+Good luck — work together, document your steps, and keep your interpretations cautious and respectful.
